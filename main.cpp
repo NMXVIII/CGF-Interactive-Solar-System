@@ -1,254 +1,253 @@
-#define GL_SILENCE_DEPRECATION
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include "stb_image.h"
-#include "Shader.h"
-#include <iostream>
-#include <vector>
-#include <cmath>
+#include "core.h"
+#include "bodies.h"
+#include "assets.h"
+#include "meshes.h"
+#include "postfx.h"
+#include "hud.h"
+#include "orbits.h"
+#include "camera.h"
+#include "input.h"
 
-using namespace std;
-using namespace glm;
-
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-void processInput(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-}
-
-unsigned int loadTexture(const char* path) {
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
-    if (data) {
-        GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        stbi_image_free(data);
+int main(int argc, char** argv) {
+    string shotPath;
+    int startSelect = -1, shotFrames = 4;
+    double startDays = 0.0;
+    float optYaw = NAN, optPitch = NAN, optDist = NAN;
+    bool startBloom = true, startHelp = true;
+    bool startSunMove = false;
+    for (int i = 1; i < argc; ++i) {
+        string a = argv[i];
+        if (a == "--screenshot" && i + 1 < argc) shotPath = argv[++i];
+        else if (a == "--select" && i + 1 < argc) startSelect = atoi(argv[++i]);
+        else if (a == "--days" && i + 1 < argc) startDays = atof(argv[++i]);
+        else if (a == "--yaw" && i + 1 < argc) optYaw = (float)atof(argv[++i]);
+        else if (a == "--pitch" && i + 1 < argc) optPitch = (float)atof(argv[++i]);
+        else if (a == "--dist" && i + 1 < argc) optDist = (float)atof(argv[++i]);
+        else if (a == "--nobloom") startBloom = false;
+        else if (a == "--nohelp") startHelp = false;
+        else if (a == "--movesun") startSunMove = true;
     }
-    else {
-        cout << "[Texture Info] No texture found at: " << path << " (Using fallback color)" << endl;
-        stbi_image_free(data);
-        return 0;
-    }
-    return textureID;
-}
+    gBloom = startBloom;
+    gHelp = startHelp;
+    gSimDays = startDays;
 
-void createSphere(float radius, unsigned int rings, unsigned int sectors,
-    unsigned int& vao, unsigned int& vbo, unsigned int& ebo, unsigned int& indexCount) {
-    vector<float> vertices;
-    vector<unsigned int> indices;
-    const float PI = 3.14159265359f;
-    for (unsigned int r = 0; r <= rings; ++r) {
-        float v = (float)r / (float)rings;
-        float phi = v * PI;
-        for (unsigned int s = 0; s <= sectors; ++s) {
-            float u = (float)s / (float)sectors;
-            float theta = u * 2.0f * PI;
-            float x = cos(theta) * sin(phi);
-            float y = cos(phi);
-            float z = sin(theta) * sin(phi);
-            vertices.push_back(x * radius);
-            vertices.push_back(y * radius);
-            vertices.push_back(z * radius);
-            vertices.push_back(x);
-            vertices.push_back(y);
-            vertices.push_back(z);
-            vertices.push_back(u);
-            vertices.push_back(v);
-        }
+    if (!glfwInit()) {
+        cerr << "Failed to initialise GLFW" << endl;
+        return -1;
     }
-    for (unsigned int r = 0; r < rings; ++r) {
-        for (unsigned int s = 0; s < sectors; ++s) {
-            unsigned int first = (r * (sectors + 1)) + s;
-            unsigned int second = first + sectors + 1;
-            indices.push_back(first);
-            indices.push_back(second);
-            indices.push_back(first + 1);
-            indices.push_back(second);
-            indices.push_back(second + 1);
-            indices.push_back(first + 1);
-        }
-    }
-    indexCount = static_cast<unsigned int>(indices.size());
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-}
-
-unsigned int createOrbitRing(float radius, int segments = 100) {
-    std::vector<float> vertices;
-    const float PI = 3.14159265359f;
-    for (int i = 0; i < segments; ++i) {
-        float angle = 2.0f * PI * i / segments;
-        vertices.push_back(radius * cos(angle));
-        vertices.push_back(0.0f);
-        vertices.push_back(radius * sin(angle));
-    }
-    unsigned int vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    return vao;
-}
-
-int main() {
-    glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Interactive Solar System", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, kTitle, NULL, NULL);
     if (!window) {
-        cout << "Failed to create GLFW window" << endl;
+        cerr << "Failed to create GLFW window (OpenGL 3.3 core required)" << endl;
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    glfwSwapInterval(1);
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        cout << "Failed to initialize GLAD" << endl;
+        cerr << "Failed to initialise GLAD" << endl;
         return -1;
     }
+    cout << "OpenGL " << glGetString(GL_VERSION) << " | " << glGetString(GL_RENDERER) << endl;
 
-    glEnable(GL_DEPTH_TEST);
+    glfwSetFramebufferSizeCallback(window, framebufferSize);
+    glfwSetMouseButtonCallback(window, mouseButton);
+    glfwSetCursorPosCallback(window, cursorMove);
+    glfwSetScrollCallback(window, scrollWheel);
+    glfwSetKeyCallback(window, keyCallback);
+    glfwGetFramebufferSize(window, &gWidth, &gHeight);
 
     Shader sunShader("shaders/sun.vert", "shaders/sun.frag");
     Shader planetShader("shaders/planet.vert", "shaders/planet.frag");
+    Shader lineShader("shaders/line.vert", "shaders/line.frag");
+    Shader starShader("shaders/stars.vert", "shaders/stars.frag");
+    Shader textShader("shaders/text.vert", "shaders/text.frag");
+    Shader brightShader("shaders/quad.vert", "shaders/bright.frag");
+    Shader blurShader("shaders/quad.vert", "shaders/blur.frag");
+    Shader compositeShader("shaders/quad.vert", "shaders/composite.frag");
 
-    unsigned int sunTex = loadTexture("textures/2k_sun.jpg");
-    unsigned int earthTex = loadTexture("textures/2k_earth_daymap.jpg");
-    unsigned int moonTex = loadTexture("textures/2k_moon.jpg");
+    buildBodies();
+    for (Body& b : gBodies) b.texture = loadBodyTexture(b);
+    unsigned int ringTex = loadTexture("textures/2k_saturn_ring_alpha.png", true, false);
+    if (!ringTex) ringTex = loadTexture("textures/placeholder/saturn_ring.png", true, true);
 
-    unsigned int sphereVAO, sphereVBO, sphereEBO, sphereIndexCount;
-    createSphere(1.0f, 30, 30, sphereVAO, sphereVBO, sphereEBO, sphereIndexCount);
+    Mesh sphere = createSphere(1.0f, 48, 64);
+    Mesh ring = createRing(1.35f, 2.4f, 96);
+    int circleCount, starCount;
+    unsigned int circleVAO = createUnitCircle(180, circleCount);
+    unsigned int starVAO = createStars(2600, starCount);
+    unsigned int emptyVAO;
+    glGenVertexArrays(1, &emptyVAO);
+    gText.init();
 
-    unsigned int earthOrbitVAO = createOrbitRing(5.0f);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+    glEnable(GL_PROGRAM_POINT_SIZE);
 
-    vec3 cameraPos = vec3(0.0f, 6.0f, 10.0f);
-    mat4 view = lookAt(cameraPos, vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-    mat4 projection = perspective(radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    if (startSunMove) gSunOffset = vec3(10.0f, 0.0f, -6.0f);
+    updateBodies();
+    if (startSelect >= 0) {
+        selectBody(startSelect);
+        gCam.distance = gCam.targetDistance;
+        gCam.target = gBodies[startSelect].position;
+    }
+    if (!isnan(optYaw)) gCam.yaw = optYaw;
+    if (!isnan(optPitch)) gCam.pitch = optPitch;
+    if (!isnan(optDist)) { gCam.distance = optDist; gCam.targetDistance = optDist; }
+
+    cout << "Controls: 0-8 planets, M Moon, TAB next, click to select, F follow, R reset, SPACE pause, "
+        ", . speed, B bloom, O orbits, N lighting, J/L/I/K/U/Y move the Sun, H help, P screenshot" << endl;
+
+    double last = glfwGetTime();
+    double fpsTimer = 0;
+    int fpsFrames = 0;
+    float fps = 0;
+    int frame = 0;
 
     while (!glfwWindowShouldClose(window)) {
-        processInput(window);
+        double now = glfwGetTime();
+        float dt = (float)std::min(now - last, 0.1);
+        last = now;
+        fpsTimer += dt;
+        fpsFrames++;
+        if (fpsTimer >= 0.5) { fps = (float)(fpsFrames / fpsTimer); fpsTimer = 0; fpsFrames = 0; }
 
-        float time = (float)glfwGetTime();
+        glfwPollEvents();
+        pollKeys(window, dt);
+        if (!gPaused) gSimDays += dt * kBaseDaysPerSecond * kSpeeds[gSpeedIndex];
 
-        glClearColor(0.02f, 0.02f, 0.05f, 1.0f);
+        if (gResized || gT.w != gWidth || gT.h != gHeight) {
+            createTargets(gWidth, gHeight);
+            gResized = false;
+        }
+        if (gWidth < 2 || gHeight < 2) { glfwSwapBuffers(window); continue; }
+
+        updateBodies();
+        updateCamera(dt);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, gT.msFbo);
+        glViewport(0, 0, gWidth, gHeight);
+        glClearColor(0.0f, 0.0f, 0.012f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+
+        starShader.use();
+        starShader.setMat4("view", gView);
+        starShader.setMat4("projection", gProj);
+        starShader.setFloat("pixelScale", std::max(1.0f, gHeight / 720.0f));
+        glDepthMask(GL_FALSE);
+        glDepthFunc(GL_LEQUAL);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        glBindVertexArray(starVAO);
+        glDrawArrays(GL_POINTS, 0, starCount);
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+
+        if (gOrbits) {
+            lineShader.use();
+            lineShader.setMat4("view", gView);
+            lineShader.setMat4("projection", gProj);
+            glBindVertexArray(circleVAO);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            for (size_t i = 1; i < gBodies.size(); ++i) {
+                const Body& b = gBodies[i];
+                const Body& p = gBodies[b.parent];
+                mat4 m = scale(translate(mat4(1.0f), p.position), vec3(b.orbitRadius));
+                lineShader.setMat4("model", m);
+                bool sel = (int)i == gSelected;
+                bool moon = b.parent != 0;
+                float a = sel ? 0.95f : (moon ? 0.28f : 0.38f);
+                vec3 c = sel ? vec3(1.0f, 0.85f, 0.3f) : vec3(0.55f, 0.65f, 0.85f);
+                lineShader.setVec4("lineColor", c.r, c.g, c.b, a);
+                glDrawArrays(GL_LINE_LOOP, 0, circleCount);
+            }
+            glDisable(GL_BLEND);
+        }
 
         sunShader.use();
-        sunShader.setMat4("view", view);
-        sunShader.setMat4("projection", projection);
-        sunShader.setMat4("model", mat4(1.0f));
-        sunShader.setBool("useTexture", false);
-        sunShader.setVec3("sunColor", vec3(0.3f, 0.3f, 0.4f));
-        glBindVertexArray(earthOrbitVAO);
-        glDrawArrays(GL_LINE_LOOP, 0, 100);
-
-        mat4 sunModel = scale(mat4(1.0f), vec3(1.2f));
-        sunShader.setMat4("model", sunModel);
-        if (sunTex != 0) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, sunTex);
-            sunShader.setInt("sunTexture", 0);
-            sunShader.setBool("useTexture", true);
-        }
-        else {
-            sunShader.setBool("useTexture", false);
-            sunShader.setVec3("sunColor", vec3(1.0f, 0.8f, 0.1f));
-        }
-        glBindVertexArray(sphereVAO);
-        glDrawElements(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0);
+        sunShader.setMat4("view", gView);
+        sunShader.setMat4("projection", gProj);
+        sunShader.setMat4("model", gBodies[0].model);
+        sunShader.setFloat("intensity", 2.2f);
+        sunShader.setVec3("sunColor", gBodies[0].color);
+        sunShader.setBool("useTexture", gBodies[0].texture != 0);
+        sunShader.setInt("sunTexture", 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBodies[0].texture);
+        drawMesh(sphere);
 
         planetShader.use();
-        planetShader.setMat4("view", view);
-        planetShader.setMat4("projection", projection);
-        planetShader.setVec3("lightPos", vec3(0.0f));
-        planetShader.setVec3("viewPos", cameraPos);
+        planetShader.setMat4("view", gView);
+        planetShader.setMat4("projection", gProj);
+        planetShader.setVec3("lightPos", gBodies[0].position);
+        planetShader.setVec3("viewPos", gEye);
+        planetShader.setVec3("lightColor", vec3(1.25f, 1.2f, 1.1f));
+        planetShader.setBool("lightingEnabled", gLighting);
+        planetShader.setFloat("ambientStrength", 0.07f);
+        planetShader.setFloat("alpha", 1.0f);
+        planetShader.setBool("ringMode", false);
+        planetShader.setInt("planetTexture", 0);
+        for (size_t i = 1; i < gBodies.size(); ++i) {
+            const Body& b = gBodies[i];
+            planetShader.setMat4("model", b.model);
+            planetShader.setMat3("normalMatrix", transpose(inverse(mat3(b.model))));
+            planetShader.setBool("useTexture", b.texture != 0);
+            planetShader.setVec3("planetColor", b.color);
+            planetShader.setFloat("specularStrength", b.specular);
+            glBindTexture(GL_TEXTURE_2D, b.texture);
+            drawMesh(sphere);
+        }
 
-        mat4 earthWorld = rotate(mat4(1.0f), time * 0.6f, vec3(0.0f, 1.0f, 0.0f));
-        earthWorld = translate(earthWorld, vec3(5.0f, 0.0f, 0.0f));
-
-        mat4 earthRenderMatrix = rotate(earthWorld, time * 1.5f, vec3(0.0f, 1.0f, 0.0f));
-        earthRenderMatrix = scale(earthRenderMatrix, vec3(0.4f));
-        planetShader.setMat4("model", earthRenderMatrix);
-
-        mat3 normalMatrix = transpose(inverse(mat3(earthRenderMatrix)));
-        planetShader.setMat3("normalMatrix", normalMatrix);
-
-        if (earthTex != 0) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, earthTex);
-            planetShader.setInt("planetTexture", 0);
+        const Body& saturn = gBodies[6];
+        if (saturn.hasRing && ringTex) {
+            mat4 rm = translate(mat4(1.0f), saturn.position);
+            rm = rotate(rm, radians(saturn.tiltDeg), vec3(0, 0, 1));
+            rm = scale(rm, vec3(saturn.radius));
+            planetShader.setMat4("model", rm);
+            planetShader.setMat3("normalMatrix", transpose(inverse(mat3(rm))));
             planetShader.setBool("useTexture", true);
+            planetShader.setBool("ringMode", true);
+            planetShader.setFloat("specularStrength", 0.0f);
+            planetShader.setFloat("alpha", 0.9f);
+            glBindTexture(GL_TEXTURE_2D, ringTex);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+            glDisable(GL_CULL_FACE);
+            drawMesh(ring);
+            glEnable(GL_CULL_FACE);
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+            planetShader.setBool("ringMode", false);
         }
-        else {
-            planetShader.setBool("useTexture", false);
-            planetShader.setVec3("planetColor", vec3(0.2f, 0.5f, 1.0f));
+
+        resolveAndBloom(brightShader, blurShader, compositeShader, emptyVAO);
+        drawHud(textShader, fps);
+
+        frame++;
+        if (gScreenshotRequested) {
+            gScreenshotRequested = false;
+            static int shotIndex = 0;
+            string name = "screenshot_" + to_string(++shotIndex) + ".png";
+            if (saveScreenshot(name)) cout << "saved " << name << endl;
         }
-        glBindVertexArray(sphereVAO);
-        glDrawElements(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0);
-
-        vec3 earthPos = vec3(earthWorld[3]);
-        mat4 moonWorld = translate(mat4(1.0f), earthPos);
-        moonWorld = rotate(moonWorld, time * 2.5f, vec3(0.0f, 1.0f, 0.0f));
-        moonWorld = translate(moonWorld, vec3(0.8f, 0.0f, 0.0f));
-        moonWorld = scale(moonWorld, vec3(0.12f));
-
-        planetShader.setMat4("model", moonWorld);
-
-        mat3 moonNormalMatrix = transpose(inverse(mat3(moonWorld)));
-        planetShader.setMat3("normalMatrix", moonNormalMatrix);
-
-        if (moonTex != 0) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, moonTex);
-            planetShader.setInt("planetTexture", 0);
-            planetShader.setBool("useTexture", true);
+        if (!shotPath.empty() && frame == shotFrames) {
+            saveScreenshot(shotPath);
+            break;
         }
-        else {
-            planetShader.setBool("useTexture", false);
-            planetShader.setVec3("planetColor", vec3(0.8f, 0.8f, 0.8f));
-        }
-        glBindVertexArray(sphereVAO);
-        glDrawElements(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
     glfwTerminate();
