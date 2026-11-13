@@ -95,6 +95,18 @@ public:
         glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
     }
 
+    void setVec2(const string& name, float x, float y) const {
+        glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
+    }
+
+    void setVec4(const string& name, float x, float y, float z, float w) const {
+        glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
+    }
+
+    void setMat3(const string& name, const mat3& mat) const {
+        glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+    }
+
     void setMat4(const string& name, const mat4& mat) const {
         glUniformMatrix4fv(
             glGetUniformLocation(ID, name.c_str()),
