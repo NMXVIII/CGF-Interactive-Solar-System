@@ -1,0 +1,15 @@
+build/
+solar
+*.o
+.DS_Store
+__MACOSX/
+archive.zip
+screenshot_*.png
+.vscode/
+*.exe
+*.obj
+*.pdb
+.vs/
+out/
+CMakeFiles/
+CMakeCache.txt
