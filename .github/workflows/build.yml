@@ -1,7 +1,6 @@
 name: Build
 
-# Builds the project on Windows, macOS and Linux for every push, and publishes a ready
-# Windows package (solar.exe + shaders + textures) as a downloadable artifact.
+# Additional tests to check if our project builds on Windows and macOS
 on:
   push:
   pull_request:
@@ -12,14 +11,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Linux packages for GLFW
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xorg-dev libgl1-dev
 
       - name: Configure (CMake downloads GLFW and GLM)
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
