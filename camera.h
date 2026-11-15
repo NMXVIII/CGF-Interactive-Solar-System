@@ -11,7 +11,7 @@ void updateCamera(float dt) {
         gCam.target += (gBodies[gSelected].position - gCam.target) * k;
     } else if (!gFollow) {
         float k = 1.0f - exp(-6.0f * dt);
-        gCam.target += (gSunOffset - gCam.target) * k;
+        gCam.target += (vec3(0.0f) - gCam.target) * k;
     }
     float k2 = 1.0f - exp(-8.0f * dt);
     gCam.distance += (gCam.targetDistance - gCam.distance) * k2;

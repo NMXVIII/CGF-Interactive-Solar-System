@@ -6,7 +6,7 @@ void updateBodies() {
     for (size_t i = 0; i < gBodies.size(); ++i) {
         Body& b = gBodies[i];
         if (b.parent < 0) {
-            b.position = gSunOffset;
+            b.position = vec3(0.0f);
             mat4 m = translate(mat4(1.0f), b.position);
             m = rotate(m, radians(b.tiltDeg), vec3(0, 0, 1));
             float spin = (float)(2.0 * PI * gSimDays * 24.0 / b.spinHours) * kSpinScale;

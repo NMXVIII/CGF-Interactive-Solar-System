@@ -185,11 +185,15 @@ int main(int argc, char** argv) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gBodies[0].texture);
         drawMesh(sphere);
+        if (length(gSunOffset) > 0.01f) {
+            sunShader.setMat4("model", scale(translate(mat4(1.0f), gSunOffset), vec3(0.3f)));
+            drawMesh(sphere);
+        }
 
         planetShader.use();
         planetShader.setMat4("view", gView);
         planetShader.setMat4("projection", gProj);
-        planetShader.setVec3("lightPos", gBodies[0].position);
+        planetShader.setVec3("lightPos", gBodies[0].position + gSunOffset);
         planetShader.setVec3("viewPos", gEye);
         planetShader.setVec3("lightColor", vec3(1.25f, 1.2f, 1.1f));
         planetShader.setBool("lightingEnabled", gLighting);

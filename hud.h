@@ -126,7 +126,7 @@ void drawHud(const Shader& textShader, float fps) {
             "SPACE : pause          , . : slower / faster time\n"
             "B : bloom on/off (headline technique)\n"
             "O : orbits   N : lighting   P : screenshot\n"
-            "J L I K U Y : move the Sun (light), BACKSPACE : back\n"
+            "J L I K U Y : move the light, BACKSPACE : back\n"
             "H or F1 : hide this help   ESC : quit";
         float hw = 440 * s, hh = 12 * lh + 10 * s;
         gText.rect(textShader, 8 * s, gHeight - hh - 8 * s, hw, hh, vec4(0, 0, 0, 0.6f));

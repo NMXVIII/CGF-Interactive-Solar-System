@@ -48,7 +48,7 @@ The program loads `shaders/` and `textures/` with relative paths, so the executa
 | B | bloom on / off (headline technique) |
 | O | orbit lines on / off |
 | N | lighting on / off (flat colours for comparison) |
-| J L I K U Y | move the Sun (the light source and the root of the hierarchy), BACKSPACE returns it |
+| J L I K U Y | move the light source (a small glowing marker shows where it is), BACKSPACE returns it |
 | H or F1 | help on / off |
 | P | screenshot (screenshot_N.png) |
 | ESC | quit |
