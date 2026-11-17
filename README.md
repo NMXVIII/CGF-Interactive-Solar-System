@@ -4,6 +4,16 @@ Computer Graphics Fundamentals, final project. Team: Baigurman Meiirzhan, Kabylk
 
 C++17, OpenGL 3.3 core, GLFW 3, GLAD, GLM, stb_image. Builds with CMake on Windows 10/11, macOS and Linux. GLAD and stb_image are in the repository; GLFW and GLM are downloaded automatically by CMake if they are not installed.
 
+## Tested environments
+
+| System | Compiler | Status |
+|---|---|---|
+| macOS (MacBook Pro, Apple M1 Pro, OpenGL 4.1 Metal) | Apple Clang 21 (Xcode command line tools), CMake | built and run, also from a fresh clone |
+| Windows (GitHub Actions `windows-latest`) | MSVC, Visual Studio 2022, CMake | build checked automatically on every push |
+| Linux | GCC, CMake | builds (checked with software rendering), not part of the automatic check |
+
+The program needs a GPU and driver with OpenGL 3.3 core support. The window title and the HUD show the team names and the topic.
+
 ## Build and run
 
 ### Windows 10 / 11
