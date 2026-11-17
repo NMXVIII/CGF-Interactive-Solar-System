@@ -74,7 +74,7 @@ The program loads `shaders/` and `textures/` with relative paths, so the executa
 
 ## Assets and licenses
 
-Textures (equirectangular maps): Solar System Scope texture library, https://www.solarsystemscope.com/textures, CC BY 4.0, copyright (c) 2010-2017 Solar System Scope. File names: 2k_sun.jpg, 2k_mercury.jpg, 2k_venus_surface.jpg, 2k_earth_daymap.jpg, 2k_moon.jpg, 2k_mars.jpg, 2k_jupiter.jpg, 2k_saturn.jpg, 2k_saturn_ring_alpha.png, 2k_uranus.jpg, 2k_neptune.jpg. If a file is missing, the program prints a message and uses a generated placeholder (textures/placeholder, made by tools/make_assets.py).
+Textures (equirectangular maps): Solar System Scope texture library, https://www.solarsystemscope.com/textures, CC BY 4.0, copyright (c) 2010-2017 Solar System Scope. File names: 2k_sun.jpg, 2k_mercury.jpg, 2k_venus_surface.jpg, 2k_earth_daymap.jpg, 2k_moon.jpg, 2k_mars.jpg, 2k_jupiter.jpg, 2k_saturn.jpg, 2k_saturn_ring_alpha.png, 2k_uranus.jpg, 2k_neptune.jpg. Included in this repository: 2k_sun.jpg, 2k_earth_daymap.jpg and 2k_moon.jpg. The other textures are not included: for Mercury, Venus, Mars, Jupiter, Saturn, Uranus and Neptune the program prints a message and uses a generated placeholder (textures/placeholder, made by tools/make_assets.py). Download the files above from Solar System Scope into textures/ to replace the placeholders.
 
 HUD font: DejaVu Sans Mono Bold rendered to textures/font.png by tools/make_assets.py (DejaVu fonts license).
 
